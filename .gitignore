@@ -67,3 +67,5 @@ docs/_build
 .vs
 # clangd index
 .clangd
+build/*
+cmake-build-debug/*
