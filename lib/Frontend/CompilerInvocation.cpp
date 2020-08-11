@@ -70,16 +70,62 @@ static void printSOLLVersion(llvm::raw_ostream &OS) {
   OS << "SOLL version " << SOLL_VERSION_STRING << "\n";
 }
 
+// Parse input options
+// ArrayRef 模板类可用做首选的在内存中只读元素的序列容器
+// 使用 ArrayRef 的数据可被传递为固定长度的数组，其元素在内存中是连续的
+// 类似于 StringRef，ArrayRef 不拥有元素数组本身，只是引用一个数组或数组的一个连续区段
 bool CompilerInvocation::ParseCommandLineOptions(
     llvm::ArrayRef<const char *> Arg, DiagnosticsEngine &Diags) {
+
+  // Print SOLL Version
   llvm::cl::SetVersionPrinter(printSOLLVersion);
+
+  // Returns true on success. Otherwise, this will print the error message to
+  // stderr and exit if \p Errs is not set (nullptr by default), or print the
+  // error message to \p Errs and return false if \p Errs is provided.
+  //
+  // If EnvVar is not nullptr, command-line options are also parsed from the
+  // environment variable named by EnvVar.  Precedence is given to occurrences
+  // from argv.  This precedence is currently implemented by parsing argv after
+  // the environment variable, so it is only implemented correctly for options
+  // that give precedence to later occurrences.  If your program supports options
+  // that give precedence to earlier occurrences, you will need to extend this
+  // function to support it correctly.
   llvm::cl::ParseCommandLineOptions(Arg.size(), Arg.data());
 
+  // ShowColors: bool var, default 1
+  // StandardErrHasColors(): thhis function determines whether
+  // the terminal connected to standard error supports colors.
+  // If standard error is not connected to a terminal,this func returns false.
   DiagnosticOpts->ShowColors = llvm::sys::Process::StandardErrHasColors();
+
+  // create renderer for text diagnostic by diagonstic options
+  // location of TextDiagnostic class: include/soll/Frontend/TextDiagnostic.h
   DiagRenderer =
       std::make_unique<TextDiagnostic>(llvm::errs(), *DiagnosticOpts);
 
+  // trversa all input files
   for (auto &Filename : InputFilenames) {
+
+    // class FrontendOptions {
+    // public:
+    //  bool ShowHelp;
+    //  bool ShowVersion;
+    //  std::vector<FrontendInputFile> Inputs;
+    //  InputKind Language = Sol;
+    //
+    //  /* The output file, if any.*/
+    //  std::string OutputFile;
+    //
+    //  /* The frontend action to perform.*/
+    //  ActionKind ProgramAction = EmitLLVM;
+    // };
+    // std::vector::emplace_back():
+    // 在vector的结尾插入一个新的元素，位置为当前最后一个元素的右边，
+    // 元素的值使用args作为参数传递给其构造函数构造。
+    // 该方法可以快速有效率地在数组size范围内增长元素，
+    // 除非当增长的元素个数大小超出了vector的ccapacity的时候才会发生重分配。
+    // 元素由调用allocator_traits::construct 以及参数args构造
     FrontendOpts.Inputs.emplace_back(Filename);
   }
   FrontendOpts.ProgramAction = Action;
